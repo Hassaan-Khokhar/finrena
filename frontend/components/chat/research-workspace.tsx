@@ -221,7 +221,16 @@ export function ResearchWorkspace() {
   // --- VOICE RECORDING HANDLERS (Groq Whisper-Large-V3) ---
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Request uncompressed, Whisper-optimized audio parameters
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000, // Whisper natively processes at 16kHz. Bypassing resampling prevents data loss.
+          channelCount: 1,   // Mono audio (stereo confuses transcription models)
+          echoCancellation: true,
+          noiseSuppression: true, 
+          autoGainControl: true 
+        } 
+      });
       setMediaStream(stream);
 
       const mimeType = typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('audio/webm')

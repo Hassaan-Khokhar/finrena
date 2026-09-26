@@ -25,11 +25,15 @@ export async function POST(req: NextRequest) {
     groqFormData.append('file', file, `audio.${extension}`);
     groqFormData.append('model', 'whisper-large-v3');
     groqFormData.append('response_format', 'json');
-    groqFormData.append('temperature', '0.0');
-    // Financial priming for accurate ticker transcription
+    groqFormData.append('temperature', '0.0'); // 0.0 forces the most deterministic, accurate output
+    
+    // 1. CRITICAL: Lock language to English to prevent accent misinterpretation
+    groqFormData.append('language', 'en'); 
+    
+    // 2. REFINED PROMPT: Mix natural conversational phrasing with financial tickers
     groqFormData.append(
-      'prompt',
-      'Finrena institutional finance research: NVDA, TSLA, AAPL, BTC, ETH, EBITDA, DCF, WACC, FOMC.'
+      'prompt', 
+      'Hello. Here is the Finrena institutional financial research query regarding NVDA, TSLA, AAPL, BTC, ETH, EBITDA, DCF, WACC, and the FOMC order book.'
     );
 
     const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
