@@ -249,9 +249,8 @@ export function ResearchWorkspace() {
       mediaRecorder.start();
       setIsRecording(true);
     } catch (err: any) {
-      console.error('Microphone access denied:', err);
+      console.error('Microphone access unavailable or denied:', err);
       setMediaStream(null);
-      alert('Microphone access was denied or is not supported in this browser.');
     }
   };
 
@@ -266,7 +265,7 @@ export function ResearchWorkspace() {
     setIsTranscribing(true);
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob);
+      formData.append('file', audioBlob, 'audio.webm');
 
       const res = await fetch('/api/transcribe', {
         method: 'POST',
@@ -274,20 +273,22 @@ export function ResearchWorkspace() {
       });
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Transcription failed');
+        // Fail silently to client, do not alert infrastructure names
+        console.error('Voice input unavailable at this time.');
+        return;
       }
 
       const data = await res.json();
       if (data.text) {
+        // Append the transcribed text to the existing input field smoothly
         setInput((prev) => (prev ? `${prev} ${data.text.trim()}` : data.text.trim()));
         if (textareaRef.current) {
           textareaRef.current.focus();
         }
       }
-    } catch (err: any) {
-      console.error('Transcription error:', err);
-      alert(err.message || 'Voice transcription failed. Verify your GROQ_API_KEY in .env.local.');
+    } catch (err) {
+      // Catch network errors silently without breaking the UI
+      console.error('Network error during voice input.');
     } finally {
       setIsTranscribing(false);
     }

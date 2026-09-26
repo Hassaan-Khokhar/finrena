@@ -8,31 +8,28 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as Blob | null;
 
     if (!file) {
-      return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
+      return NextResponse.json({ error: 'No audio provided' }, { status: 400 });
     }
 
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey || groqApiKey === 'gsk_your_groq_api_key_here') {
-      return NextResponse.json(
-        { error: 'GROQ_API_KEY is not configured. Please set your Groq API key in .env.local.' },
-        { status: 500 }
-      );
+      // Generic server error, hiding infrastructure details
+      return NextResponse.json({ error: 'Transcription service unavailable' }, { status: 503 });
     }
 
-    // Determine filename / extension based on blob type
+    // Determine filename / extension based on audio mime type
     const mimeType = file.type || 'audio/webm';
     const extension = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm';
 
-    // Prepare multipart payload for Groq OpenAI-compatible audio endpoint
     const groqFormData = new FormData();
     groqFormData.append('file', file, `audio.${extension}`);
     groqFormData.append('model', 'whisper-large-v3');
     groqFormData.append('response_format', 'json');
     groqFormData.append('temperature', '0.0');
-    // Financial keyword priming prevents ticker distortion
+    // Financial priming for accurate ticker transcription
     groqFormData.append(
       'prompt',
-      'Finrena institutional finance research: NVDA, TSLA, AAPL, BTC, ETH, EBITDA, DCF, WACC, Monte Carlo, Order Book, FOMC.'
+      'Finrena institutional finance research: NVDA, TSLA, AAPL, BTC, ETH, EBITDA, DCF, WACC, FOMC.'
     );
 
     const groqResponse = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
@@ -44,16 +41,14 @@ export async function POST(req: NextRequest) {
     });
 
     if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      return NextResponse.json(
-        { error: `Groq Whisper failed: ${errorText}` },
-        { status: groqResponse.status }
-      );
+      console.error('Transcription upstream response not ok:', groqResponse.status);
+      return NextResponse.json({ error: 'Transcription failed' }, { status: 502 });
     }
 
     const data = await groqResponse.json();
     return NextResponse.json({ text: data.text });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  } catch (error) {
+    console.error('Internal error in transcription route:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
