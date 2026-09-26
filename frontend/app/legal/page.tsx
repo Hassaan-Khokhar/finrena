@@ -94,7 +94,7 @@ export default function LegalPage() {
 
               <h3>5. Contact</h3>
               <p>
-                For legal and privacy inquiries, please contact our team at <a href="mailto:asan@softagelabs.tech">asan@softagelabs.tech</a>.
+                For legal and privacy inquiries, please contact our team at <a href="mailto:hello@softagelabs.tech">hello@softagelabs.tech</a>.
               </p>
             </div>
           </TabsContent>
