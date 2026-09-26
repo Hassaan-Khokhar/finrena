@@ -1,0 +1,78 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+enum Role {
+  USER
+  ADMIN
+  LEAD_ANALYST
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  GITHUB
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  passwordHash  String?        @map("password_hash")
+  fullName      String         @map("full_name")
+  avatarUrl     String?        @map("avatar_url")
+  role          Role           @default(USER)
+  authProvider  AuthProvider   @default(LOCAL) @map("auth_provider")
+  oauthId       String?        @unique @map("oauth_id")
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+  debates       DebateDossier[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  familyId  String   @map("family_id") @db.Uuid
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model DebateDossier {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
+  ticker          String   @db.VarChar(10)
+  companyName     String   @map("company_name")
+  overallVerdict  String   @map("overall_verdict")
+  consensusScore  Int      @map("consensus_score")
+  targetPrice     Decimal  @map("target_price") @db.Decimal(12, 2)
+  stopLoss        Decimal  @map("stop_loss") @db.Decimal(12, 2)
+  scorecard       Json
+  transcript      Json
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([ticker])
+  @@index([userId])
+  @@map("debate_dossiers")
+}

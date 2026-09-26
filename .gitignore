@@ -1,0 +1,88 @@
+# ==============================================================================
+# Root .gitignore for Finrena
+# ==============================================================================
+
+# --- Secrets & Environment Files (CRITICAL: DO NOT REMOVE) ---
+.env
+.env.*
+.env*.local
+*.env
+**/.env
+**/.env.*
+**/.env*.local
+!**/.env.example
+
+# --- Certificates & Private Keys ---
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*id_rsa*
+*.secret
+
+# --- Dependencies ---
+node_modules/
+**/node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# --- Build Artifacts ---
+.next/
+**/.next/
+out/
+**/out/
+build/
+**/build/
+dist/
+**/dist/
+
+# --- Logs & Debugging ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- IDE & Editor Metadata ---
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- AI Agents & Workspace Artifacts ---
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.cursor/
+**/.cursor/
+.devin/
+**/.devin/
+.gemini/
+**/.gemini/
+
+# --- Testing ---
+coverage/
+**/coverage/
+
+# --- Framework Metadata ---
+.vercel
+**/.vercel
+*.tsbuildinfo
+next-env.d.ts
