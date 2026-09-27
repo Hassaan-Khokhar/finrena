@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { FinrenaLogo } from '../shared/finrena-logo';
 import { GhostIcon } from '../shared/ghost-icon';
 import { useAuthModal } from '../../context/auth-modal-context';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { CodeBlock } from './code-block';
 import { 
   ArrowUp, 
   Sparkles, 
@@ -65,91 +68,71 @@ const MOCK_HISTORY: HistoryItem[] = [
   },
 ];
 
-// Helper to format structured financial analysis without raw markdown leaking
-function FormattedMessage({ content }: { content: string }) {
-  const lines = content.split('\n');
-
+// Workspace-isolated markdown and terminal code-fence renderer
+export const FormattedMessage = ({ content }: { content: string }) => {
   return (
-    <div className="font-sans text-sm text-zinc-300 leading-relaxed space-y-2 select-text">
-      {lines.map((line, idx) => {
-        const trimmed = line.trim();
+    <div className="prose prose-invert max-w-none text-zinc-300 text-sm leading-relaxed">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            const codeText = String(children).replace(/\n$/, '');
 
-        if (!trimmed) {
-          return <div key={idx} className="h-1.5" />;
-        }
-
-        // Heading (### ...)
-        if (trimmed.startsWith('### ')) {
-          return (
-            <h4 key={idx} className="font-sans font-semibold text-base text-zinc-100 tracking-tight pt-2 pb-0.5 border-b border-zinc-800/60">
-              {trimmed.replace('### ', '')}
-            </h4>
-          );
-        }
-
-        // Bullet point (• ...)
-        if (trimmed.startsWith('• ')) {
-          const rawBullet = trimmed.replace('• ', '');
-          const parts = rawBullet.split(/(\*\*.*?\*\*)/g);
-
-          return (
-            <div key={idx} className="flex items-start gap-2 pl-2">
-              <span className="text-emerald-400 font-bold shrink-0 mt-0.5">•</span>
-              <p className="flex-1 font-sans text-zinc-300">
-                {parts.map((p, i) => {
-                  if (p.startsWith('**') && p.endsWith('**')) {
-                    return (
-                      <strong key={i} className="font-semibold text-zinc-100 font-sans">
-                        {p.slice(2, -2)}
-                      </strong>
-                    );
-                  }
-                  return p;
-                })}
-              </p>
-            </div>
-          );
-        }
-
-        // Subhead (**1. Heading:**)
-        if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
-          return (
-            <p key={idx} className="font-sans font-semibold text-zinc-100 text-[13px] pt-1 uppercase tracking-wide text-emerald-400/90 font-mono">
-              {trimmed.slice(2, -2)}
-            </p>
-          );
-        }
-
-        // Tip callout
-        if (trimmed.startsWith('*Tip:')) {
-          return (
-            <div key={idx} className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-sans text-emerald-300 flex items-start gap-2">
-              <Sparkles className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
-              <span>{trimmed.replace(/\*/g, '')}</span>
-            </div>
-          );
-        }
-
-        // Standard text with bold support
-        const parts = trimmed.split(/(\*\*.*?\*\*)/g);
-        return (
-          <p key={idx} className="font-sans text-zinc-300">
-            {parts.map((p, i) => {
-              if (p.startsWith('**') && p.endsWith('**')) {
-                return (
-                  <strong key={i} className="font-semibold text-zinc-100 font-sans">
-                    {p.slice(2, -2)}
-                  </strong>
-                );
-              }
-              return p;
-            })}
-          </p>
-        );
-      })}
+            if (!inline && match) {
+              return <CodeBlock language={match[1]} value={codeText} />;
+            }
+            if (!inline && codeText.includes('\n')) {
+              return <CodeBlock language="text" value={codeText} />;
+            }
+            return (
+              <code className="bg-zinc-800/80 text-emerald-400 px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                {children}
+              </code>
+            );
+          },
+          table({ children }) {
+            return (
+              <div className="my-4 overflow-x-auto rounded-lg border border-zinc-800">
+                <table className="w-full text-left border-collapse text-xs font-mono">{children}</table>
+              </div>
+            );
+          },
+          thead({ children }) {
+            return <thead className="bg-zinc-900 border-b border-zinc-800 text-zinc-300 font-semibold">{children}</thead>;
+          },
+          th({ children }) {
+            return <th className="p-2.5 text-zinc-200">{children}</th>;
+          },
+          td({ children }) {
+            return <td className="p-2.5 border-t border-zinc-800/50 text-zinc-400">{children}</td>;
+          },
+          h1({ children }) {
+            return <h1 className="text-lg font-bold text-zinc-100 mt-6 mb-3 tracking-tight border-b border-zinc-800 pb-1.5">{children}</h1>;
+          },
+          h2({ children }) {
+            return <h2 className="text-base font-semibold text-zinc-100 mt-5 mb-2.5 tracking-tight border-b border-zinc-800/60 pb-1">{children}</h2>;
+          },
+          h3({ children }) {
+            return <h3 className="text-sm font-semibold text-emerald-400/90 mt-4 mb-2 tracking-wide uppercase">{children}</h3>;
+          },
+          ul({ children }) {
+            return <ul className="list-disc list-outside pl-4 space-y-1.5 my-2.5 text-zinc-300">{children}</ul>;
+          },
+          ol({ children }) {
+            return <ol className="list-decimal list-outside pl-4 space-y-1.5 my-2.5 text-zinc-300">{children}</ol>;
+          },
+          hr() {
+            return <hr className="my-6 border-zinc-800/80" />;
+          }
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
-}
+};
 
 export function ResearchWorkspace() {
   const router = useRouter();
@@ -167,6 +150,7 @@ export function ResearchWorkspace() {
   const [isGhostMode, setIsGhostMode] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false); // true once character-by-character rendering begins
   const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -340,79 +324,134 @@ export function ResearchWorkspace() {
     }
   }, [input]);
 
-  const generateLeadAnalystResponse = (userQuery: string) => {
+  const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isSubmittingRef = useRef<boolean>(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cleanup streaming interval and in-flight fetch on unmount
+  useEffect(() => {
+    return () => {
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  /**
+   * Calls the real /api/chat backend endpoint and streams the response
+   * character-by-character for a premium typing effect.
+   */
+  const generateLeadAnalystResponse = async (userQuery: string, allMessages: Message[]) => {
+    if (isSubmittingRef.current || !userQuery.trim()) return;
+    isSubmittingRef.current = true;
     setIsGenerating(true);
 
-    setTimeout(() => {
-      let responseText = '';
-      const queryLower = userQuery.toLowerCase();
+    // Cancel any lingering in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
-      if (queryLower.includes('tsla') || queryLower.includes('tesla')) {
-        responseText = `### Executive Summary: Tesla Inc. (TSLA) Cash Flow & CapEx Trajectory
+    try {
+      // Build the messages payload for the API (convert 'agent' role to 'assistant')
+      const apiMessages = allMessages.map((m) => ({
+        role: m.role === 'agent' ? 'assistant' : 'user',
+        content: m.content,
+      }));
 
-**1. Operating Cash Flow (OCF):**
-• Q3 Operating Cash Flow generated **$6.25B**, driven by working capital normalization, inventory liquidations in North America, and record energy storage deployments (+125% YoY).
-• Automotive regulatory credits contributed **$739M** (+33% YoY), representing high-margin earnings that temporarily cushion core automotive gross margin contraction (17.1% ex-credits).
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userQuery,
+          conversationHistory: apiMessages.slice(0, -1),
+        }),
+        signal: abortControllerRef.current.signal,
+      });
 
-**2. Free Cash Flow (FCF) & AI Infrastructure CapEx:**
-• Free Cash Flow reached **$2.74B**, exceeding consensus estimates of $1.61B.
-• Full-year CapEx is paced at **>$11.0B**, predominantly directed toward compute clustering (Cortex datacenter, 50k+ H100/H200 equivalents) and Robotaxi validation compute.
-
-**3. Quantitative Verdict:**
-• **Balance Sheet:** Fortress liquidity with **$33.6B** in cash & investments and negligible debt.
-• **Primary Risk:** Continued margin compression if EV price cuts resume in EMEA and APAC.
-
-*Tip: Enable the Debate Mode toggle below to stress-test TSLA valuation against our Bull, Bear, and Quant agents.*`;
-      } else if (queryLower.includes('fomc') || queryLower.includes('rate') || queryLower.includes('macro')) {
-        responseText = `### Macro Analysis: FOMC Rate Cut Cycle & Capital Allocations
-
-**1. Transmission Channels & Discount Rates:**
-• A 50bps terminal rate compression lowers the weighted average cost of capital (WACC) across high-multiple growth equities by **~38–45bps**, disproportionately expanding forward P/E multiples for Tier-1 mega-cap tech.
-• High-yield spreads have tightened to historical percentiles (300bps over SOFR), indicating minimal immediate credit stress across leveraged issuers.
-
-**2. Fixed Income & Liquidity Repositioning:**
-• Short-duration cash yields (Treasury bills, reverse repos) are dropping from ~5.25% toward ~4.50%, triggering capital migration toward investment-grade corporate credit and dividend-aristocrat equities.
-• Dollar index (DXY) softness provides immediate tailwinds for multinational EPS translations and emerging market sovereign debt servicing.
-
-**3. Strategic Portfolio Posture:**
-• Overweight defensive quality compounders; neutral on non-profitable high-beta SaaS. Monitor 2Y/10Y yield curve steepening velocity.`;
-      } else if (queryLower.includes('nvda') || queryLower.includes('nvidia')) {
-        responseText = `### Institutional Dossier: NVIDIA Corp (NVDA) Run-Rate & Margins
-
-**1. Datacenter Revenue Velocity:**
-• Datacenter segment annualized run-rate currently tracking **>$110B**, propelled by Hopper (H100/H200) transition demand and initial Blackwell (B200/GB200) allocations across hyperscalers (MSFT, AMZN, GOOGL, META).
-• Blackwell capacity booked out 12+ months forward with TSMC CoWoS packaging constraints operating at maximum utilization.
-
-**2. Gross Margin Sustainability:**
-• Non-GAAP gross margins sustained at **~75.0%**, supported by complete system architecture sales (NVLink, InfiniBand, Quantum-2 switches) rather than standalone accelerator silicon.
-• Software run-rate (NVIDIA AI Enterprise) is compounding at triple-digit rates, introducing recurring high-margin ARR.
-
-**3. Key Adjudication Metric:**
-• Hyperscaler CapEx-to-Revenue return on investment (ROI). If software monetization lags silicon spend into 2026, capex digestion risk becomes paramount.`;
-      } else {
-        responseText = `### Institutional Synthesis: Lead Analyst Dossier
-
-**Inquiry:** "${userQuery}"
-
-**1. Core Quantitative Assessment:**
-• Synthesizing live SEC 10-K/10-Q filings, consensus sell-side revisions, and institutional order book telemetry.
-• Cross-asset liquidity and implied volatility surfaces (VIX term structure) indicate balanced market pricing with elevated dispersion across individual equity constituents.
-
-**2. Strategic Risk Parameters:**
-• Macro sensitivity to real rates, corporate earnings revisions breadth, and factor rotation between Momentum and Value.
-
-**3. Recommended Action:**
-• For a full multi-agent stress test including Monte Carlo simulations and adversarial Bull/Bear debate cross-examination, toggle the Debate Mode switch below and re-submit your prompt.`;
+      if (!res.ok) {
+        console.error('Chat API returned non-OK status:', res.status);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'agent',
+            content:
+              'I am Finrena. Our institutional servers are currently processing unprecedented market traffic. Please wait 60 seconds for the network connection to stabilize, and submit your research query again.',
+          },
+        ]);
+        setIsGenerating(false);
+        return;
       }
 
-      setMessages((prev) => [...prev, { role: 'agent', content: responseText }]);
+      const data = await res.json();
+      const fullText: string = data.content || data.reply || 'Analysis unavailable at this time.';
+
+      // Character-by-character streaming animation for premium feel
+      let charIndex = 0;
+      const CHARS_PER_TICK = 3; // Speed: 3 characters every 12ms ≈ 250 chars/sec
+      const TICK_MS = 12;
+
+      // Add an empty agent message that we'll fill progressively
+      setMessages((prev) => [...prev, { role: 'agent', content: '' }]);
+      setIsStreaming(true); // Switch from loading skeleton to character render mode
+
+      streamingIntervalRef.current = setInterval(() => {
+        charIndex += CHARS_PER_TICK;
+
+        if (charIndex >= fullText.length) {
+          // Streaming complete — set final text and stop
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: 'agent', content: fullText };
+            return updated;
+          });
+          if (streamingIntervalRef.current) {
+            clearInterval(streamingIntervalRef.current);
+            streamingIntervalRef.current = null;
+          }
+          setIsStreaming(false);
+          setIsGenerating(false);
+        } else {
+          // Update the last message with progressively more characters
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = {
+              role: 'agent',
+              content: fullText.slice(0, charIndex),
+            };
+            return updated;
+          });
+        }
+      }, TICK_MS);
+    } catch (err: unknown) {
+      if ((err as Error)?.name === 'AbortError') {
+        return; // Request was aborted cleanly, ignore
+      }
+      console.error('Network error calling chat API:', err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'agent',
+          content:
+            'I am Finrena. A network interruption occurred while connecting to our institutional servers. Please check your connection and try again.',
+        },
+      ]);
+      setIsStreaming(false);
       setIsGenerating(false);
-    }, 700);
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || isGenerating || isTranscribing) return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!input.trim() || isGenerating || isTranscribing || isSubmittingRef.current) return;
 
     const query = input.trim();
 
@@ -428,15 +467,17 @@ export function ResearchWorkspace() {
         // Ghost Mode: Explicitly bypass DB calls; message lives only in React state
         console.log('Ghost Mode active: Database persistence bypassed');
       }
-      setMessages((prev) => [...prev, { role: 'user', content: query }]);
+      const newMessages: Message[] = [...messages, { role: 'user', content: query }];
+      setMessages(newMessages);
       setInput('');
-      generateLeadAnalystResponse(query);
+      generateLeadAnalystResponse(query, newMessages);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       handleSubmit();
     }
   };
@@ -452,10 +493,9 @@ export function ResearchWorkspace() {
 
   const handleLoadHistory = (item: HistoryItem) => {
     setActiveSessionTitle(item.title);
-    setMessages([
-      { role: 'user', content: item.query },
-    ]);
-    generateLeadAnalystResponse(item.query);
+    const newMessages: Message[] = [{ role: 'user', content: item.query }];
+    setMessages(newMessages);
+    generateLeadAnalystResponse(item.query, newMessages);
     // On mobile, auto-close drawer on select so the chat view is immediately visible
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
@@ -485,9 +525,14 @@ export function ResearchWorkspace() {
         <div className="px-4 py-5 flex items-center justify-between border-b border-zinc-800/80 mb-2">
           <div className="flex items-center gap-2.5">
             <FinrenaLogo className="w-5 h-5"/>
-            <span className="font-semibold text-sm tracking-tight text-white font-sans flex items-center">
-              Finrena <span className="text-[10px] font-mono text-zinc-500 font-normal ml-1.5 uppercase">WORKSPACE</span>
-            </span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-semibold text-[15.5px] text-white font-sans tracking-normal leading-none">
+                Finrena
+              </span>
+              <span className="text-[7.5px] font-mono text-zinc-500 font-medium uppercase tracking-wider leading-none">
+                WORKSPACE
+              </span>
+            </div>
           </div>
           {/* Drawer toggle button with PanelLeft icon */}
           <button 
@@ -668,8 +713,8 @@ export function ResearchWorkspace() {
                 </div>
               ))}
 
-              {/* Generating / Typing Indicator */}
-              {isGenerating && (
+              {/* Phase 1: Server-side processing indicator (before streaming begins) */}
+              {isGenerating && !isStreaming && (
                 <div className="flex items-start gap-3 max-w-[90%]">
                   <div className="shrink-0 mt-0.5">
                     <FinrenaLogo className="w-6 h-6" />
@@ -677,7 +722,7 @@ export function ResearchWorkspace() {
                   <div className="flex-1 font-sans">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs font-mono text-emerald-400 font-medium">Lead Analyst</span>
-                      <span className="text-[10px] font-mono text-zinc-500 animate-pulse">Synthesizing telemetry...</span>
+                      <span className="text-[10px] font-mono text-zinc-500 animate-pulse">Analyzing institutional order book...</span>
                     </div>
                     <div className="flex items-center gap-1.5 py-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -808,16 +853,15 @@ export function ResearchWorkspace() {
                     </div>
 
                     {/* The Label */}
-                    <span className="text-[11px] font-mono tracking-wider uppercase text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                    <span
+                      className={`text-[11px] font-mono tracking-wider uppercase transition-colors leading-none ${
+                        isDebateMode
+                          ? 'text-emerald-400 font-medium'
+                          : 'text-zinc-400 group-hover:text-zinc-300'
+                      }`}
+                    >
                       Debate Mode
                     </span>
-
-                    {/* Visual Status Indicator */}
-                    {isDebateMode && (
-                      <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 hidden sm:inline-block ml-1">
-                        Debate On
-                      </span>
-                    )}
                   </div>
 
                   {/* Ghost Protocol Active Pill */}

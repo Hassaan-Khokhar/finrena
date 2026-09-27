@@ -22,7 +22,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col text-zinc-100 overflow-x-clip relative">
-      <Navbar />
+      <Navbar logoHref="/" />
       
       {/* Background Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none">
@@ -57,7 +57,7 @@ export default function LandingPage() {
             href="/chat"
             className="px-6 py-3 rounded-lg font-medium text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] bg-emerald-600 hover:bg-emerald-500 transition-all flex items-center justify-center text-sm"
           >
-            Start Researching — Free →
+            Start Researching →
           </Link>
           <a
             href="#framework"

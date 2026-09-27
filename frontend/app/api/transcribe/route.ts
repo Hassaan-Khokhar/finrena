@@ -11,10 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No audio provided' }, { status: 400 });
     }
 
-    const groqApiKey = process.env.GROQ_API_KEY;
+    const groqApiKey = process.env.GROQ_VOICE_KEY || process.env.GROQ_API_KEY;
     if (!groqApiKey || groqApiKey === 'gsk_your_groq_api_key_here') {
-      // Generic server error, hiding infrastructure details
-      return NextResponse.json({ error: 'Transcription service unavailable' }, { status: 503 });
+      return NextResponse.json({ error: 'Voice transcription service unavailable' }, { status: 503 });
     }
 
     // Determine filename / extension based on audio mime type

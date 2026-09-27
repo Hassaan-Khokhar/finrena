@@ -14,7 +14,7 @@ interface AuthUser {
   role: string;
 }
 
-export function Navbar() {
+export function Navbar({ logoHref = '/chat' }: { logoHref?: string }) {
   const { openAuthModal } = useAuthModal();
   const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -61,12 +61,12 @@ export function Navbar() {
   return (
     <nav className="h-14 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-6 shrink-0 w-full">
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-emerald-500" />
-          <Link href="/" className="font-bold text-lg tracking-tight text-zinc-100 flex items-center">
+        <Link href={logoHref} className="flex items-center gap-2 group">
+          <Activity className="h-5 w-5 text-emerald-500 group-hover:text-emerald-400 transition-colors" />
+          <span className="font-bold text-lg tracking-tight text-zinc-100 group-hover:text-white transition-colors">
             Finrena
-          </Link>
-        </div>
+          </span>
+        </Link>
 
         <div className="hidden sm:flex items-center gap-1 pl-2">
           <Link
